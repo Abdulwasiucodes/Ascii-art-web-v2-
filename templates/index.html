@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ASCII Art Web</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+
+    <div class="noise"></div>
+
+    <header class="site-header">
+        <div class="header-inner">
+            <div class="logo">
+                <span class="logo-bracket">[</span>
+                <span class="logo-text">ASCII</span>
+                <span class="logo-accent">://</span>
+                <span class="logo-text">ART</span>
+                <span class="logo-bracket">]</span>
+            </div>
+            <p class="tagline">Transform text into terminal art &mdash; by Abdulwasiucodes</p>
+        </div>
+    </header>
+
+    <main class="main-content">
+
+        <section class="form-section">
+            <div class="terminal-window">
+                <div class="terminal-bar">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                    <span class="terminal-title">ascii-art-generator.sh</span>
+                </div>
+
+                <div class="terminal-body">
+                    <form action="/ascii-art" method="post" id="ascii-form">
+
+                        <div class="field-group">
+                            <label class="field-label" for="text-input">
+                                <span class="prompt">&gt;_</span> Enter your text
+                            </label>
+                            <textarea
+                                id="text-input"
+                                name="text"
+                                placeholder="Type something cool..."
+                                rows="4"
+                                maxlength="500"
+                            >{{.Text}}</textarea>
+                            <div class="char-counter">
+                                <span id="char-count">0</span> / 500
+                            </div>
+                        </div>
+
+                        <div class="field-group">
+                            <label class="field-label">
+                                <span class="prompt">&gt;_</span> Select a banner style
+                            </label>
+                            <div class="banner-options">
+                                <label class="banner-card {{if eq .Banner "shadow"}}selected{{end}}">
+                                    <input type="radio" name="banner" value="shadow" required
+                                        {{if eq .Banner "shadow"}}checked{{end}}>
+                                    <div class="banner-preview">
+                                        <span class="banner-name">Shadow</span>
+                                        <span class="banner-sample">▓░▒</span>
+                                        <span class="banner-desc">Layered depth effect</span>
+                                    </div>
+                                </label>
+
+                                <label class="banner-card {{if eq .Banner "standard"}}selected{{end}}">
+                                    <input type="radio" name="banner" value="standard"
+                                        {{if eq .Banner "standard"}}checked{{end}}>
+                                    <div class="banner-preview">
+                                        <span class="banner-name">Standard</span>
+                                        <span class="banner-sample">█▌▐</span>
+                                        <span class="banner-desc">Clean block style</span>
+                                    </div>
+                                </label>
+
+                                <label class="banner-card {{if eq .Banner "thinkertoy"}}selected{{end}}">
+                                    <input type="radio" name="banner" value="thinkertoy"
+                                        {{if eq .Banner "thinkertoy"}}checked{{end}}>
+                                    <div class="banner-preview">
+                                        <span class="banner-name">Thinkertoy</span>
+                                        <span class="banner-sample">o-+</span>
+                                        <span class="banner-desc">Playful pipe art</span>
+                                    </div>
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="form-actions">
+                            <button type="submit" class="btn-generate" id="generate-btn">
+                                <span class="btn-icon">⚡</span>
+                                <span class="btn-label">Generate</span>
+                            </button>
+                            <button type="reset" class="btn-clear" onclick="resetForm()">
+                                <span>✕ Clear</span>
+                            </button>
+                        </div>
+
+                    </form>
+                </div>
+            </div>
+        </section>
+
+        {{if .Error}}
+        <section class="feedback-section">
+            <div class="alert alert-error" role="alert" aria-live="polite">
+                <span class="alert-icon">⚠</span>
+                <span class="alert-msg">{{.Error}}</span>
+            </div>
+        </section>
+        {{end}}
+
+        {{if .Result}}
+        <section class="result-section" id="result">
+            <div class="terminal-window result-terminal">
+                <div class="terminal-bar">
+                    <span class="dot dot-red"></span>
+                    <span class="dot dot-yellow"></span>
+                    <span class="dot dot-green"></span>
+                    <span class="terminal-title">output &mdash; {{.Banner}} style</span>
+                    <button class="copy-btn" onclick="copyResult()" title="Copy to clipboard">
+                        <span id="copy-label">⧉ Copy</span>
+                    </button>
+                </div>
+                <div class="terminal-body result-body">
+                    <div class="scanlines"></div>
+                    <pre class="ascii-output" id="ascii-output">{{.Result}}</pre>
+                </div>
+            </div>
+        </section>
+        {{end}}
+
+    </main>
+
+    <footer class="site-footer">
+        <p>
+            <span class="footer-accent">ascii-art-web</span>
+            &nbsp;·&nbsp; built with Go &nbsp;·&nbsp;
+            <span class="footer-accent">Abdulwasiucodes</span>
+        </p>
+    </footer>
+
+    <script>
+        // Character counter
+        const textarea = document.getElementById('text-input');
+        const counter = document.getElementById('char-count');
+
+        function updateCounter() {
+            if (textarea && counter) {
+                counter.textContent = textarea.value.length;
+            }
+        }
+        if (textarea) {
+            textarea.addEventListener('input', updateCounter);
+            updateCounter();
+        }
+
+        // Banner card selection highlight
+        document.querySelectorAll('.banner-card input[type="radio"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                document.querySelectorAll('.banner-card').forEach(c => c.classList.remove('selected'));
+                radio.closest('.banner-card').classList.add('selected');
+            });
+        });
+
+        // Copy to clipboard
+        function copyResult() {
+            const pre = document.getElementById('ascii-output');
+            if (!pre) return;
+            navigator.clipboard.writeText(pre.textContent).then(() => {
+                const label = document.getElementById('copy-label');
+                label.textContent = '✓ Copied!';
+                setTimeout(() => label.textContent = '⧉ Copy', 2000);
+            });
+        }
+
+        // Reset form
+        function resetForm() {
+            if (counter) counter.textContent = '0';
+            document.querySelectorAll('.banner-card').forEach(c => c.classList.remove('selected'));
+        }
+
+        // Scroll to result if present
+        const result = document.getElementById('result');
+        if (result) {
+            result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // Generate button loading state
+        const form = document.getElementById('ascii-form');
+        const btn = document.getElementById('generate-btn');
+        if (form && btn) {
+            form.addEventListener('submit', () => {
+                btn.classList.add('loading');
+                btn.querySelector('.btn-label').textContent = 'Generating...';
+            });
+        }
+    </script>
+
+</body>
+</html>
